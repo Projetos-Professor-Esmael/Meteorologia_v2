@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MeteoMapa | Meteorologia interativa</title><meta name="description" content="Mapa meteorológico interativo com vento, temperatura, chuva, nuvens, pressão, radar e previsão do tempo.">
+<meta name="theme-color" content="#0b1020">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="MeteoMapa"><meta name="format-detection" content="telephone=no">
+<script>try{var t=JSON.parse(localStorage.getItem("meteomapa-v1")).theme;if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌀</text></svg>">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<style>
+:root{--bg:#30343a;--g:rgba(20,25,33,.88);--ink:#f4f7fb;--mut:#b2bdca;--acc:#f5b301;--accink:#191400;--line:rgba(190,211,238,.19);--f1:rgba(255,255,255,.07);--f2:rgba(255,255,255,.14);--dlg:#101d30;--back:rgba(0,0,0,.68);--link:#a9d3ff;--bad:#ff9292;--good:#8be0a5;color-scheme:dark}
+:root[data-theme=light]{--bg:#eaf0f7;--g:rgba(255,255,255,.94);--ink:#14243a;--mut:#5c6b80;--acc:#e5a900;--accink:#171200;--line:rgba(20,36,58,.18);--f1:rgba(20,36,58,.06);--f2:rgba(20,36,58,.12);--dlg:#fff;--back:rgba(20,36,58,.5);--link:#0756a5;color-scheme:light}
+:root{--ab:24px}*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html{-webkit-text-size-adjust:100%;height:100%}body{margin:0;position:fixed;left:0;top:0;width:100%;height:100%;height:100dvh;background:var(--bg);color:var(--ink);font:14px/1.4 Inter,system-ui,"Segoe UI",Roboto,sans-serif;overflow:hidden;overscroll-behavior:none}#map{position:absolute;inset:0;z-index:0;background:#454a50;touch-action:none}#pt{display:none}button{touch-action:manipulation}
+#fld,#prt{position:absolute;left:0;top:0;pointer-events:none;z-index:450}#fld{filter:blur(3.2px) saturate(1.22);transition:opacity .25s;mix-blend-mode:normal}
+#top,#panel,#menu,#leg,#bar,#newsTicker{position:absolute;z-index:1000}#top{top:12px;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center;background:rgba(18,23,31,.91);border:1px solid rgba(255,255,255,.2);border-radius:18px;padding:6px 9px;box-shadow:0 5px 24px #0006;backdrop-filter:blur(16px)}.logo{padding:0 9px;color:var(--acc);font-weight:800;letter-spacing:.2px}button{font:inherit;color:var(--ink);background:var(--f1);border:1px solid var(--line);border-radius:8px;padding:7px 11px;cursor:pointer;white-space:nowrap}button:hover{background:var(--f2)}button.on,button.p{background:var(--acc);color:var(--accink);border-color:var(--acc);font-weight:700}button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#panel{top:12px;left:12px;width:300px;max-height:calc(100% - 150px);overflow:auto;background:rgba(17,23,33,.88);border:1px solid var(--line);border-radius:13px;padding:11px;box-shadow:0 8px 28px #0003;backdrop-filter:blur(14px)}.srch{display:flex;gap:6px}input{font:inherit;color:var(--ink);background:var(--f1);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}#res{list-style:none;margin:6px 0 0;padding:0}#res li button{width:100%;text-align:left;margin-top:3px}#favs{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}#favs button{font-size:.78rem;padding:3px 8px;border-radius:99px}.big{font-size:2.5rem;font-weight:300;line-height:1.1}.mut{color:var(--mut);font-size:.82rem}#days{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:9px}.dc{background:var(--f1);border:1px solid var(--line);border-radius:8px;padding:6px 3px;text-align:center;font-size:.75rem}.dc b{display:block;margin-bottom:3px}
+#menu{right:12px;top:12px;display:flex;flex-direction:column;gap:5px;align-items:flex-end;max-height:calc(100% - 180px);overflow:auto;padding:2px}#menu button{background:rgba(18,24,34,.91);border-color:rgba(255,255,255,.2);box-shadow:0 3px 12px #0005;backdrop-filter:blur(12px)}#menu button.on,#menu button.on:hover{background:var(--acc);color:var(--accink);border-color:var(--acc)}#leg{left:12px;bottom:calc(var(--ab) + 60px);width:min(270px,45vw);background:var(--g);border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:.76rem;backdrop-filter:blur(12px)}#lgb{height:9px;border-radius:5px;margin:4px 0}#lgl{display:flex;justify-content:space-between;color:var(--mut)}
+#newsTicker{left:330px;right:170px;top:64px;height:76px;min-height:0;overflow:hidden;background:rgba(17,23,32,.84);border:1px solid rgba(255,255,255,.19);border-radius:11px;padding:6px 9px;color:#f3f7ff;box-shadow:0 6px 24px #0005;backdrop-filter:blur(12px)}.tickerHead{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:.72rem;line-height:1.1}.tickerHead strong{color:#ffc629;letter-spacing:.2px}.tickerHead span{color:#a9b9ce}.tickerControls{margin-left:auto;display:flex;gap:4px}.tickerControls button{padding:2px 8px;color:#fff;background:#ffffff12;border-color:#ffffff24}.tickerGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;height:43px}.newsCard{min-width:0;border-left:2px solid #f5b301;padding:1px 7px;display:flex;flex-direction:column;justify-content:space-between;gap:2px;background:rgba(255,255,255,.045);border-radius:0 5px 5px 0}.newsCard a{color:#f4f7fc;text-decoration:none;font-size:.72rem;line-height:1.2;font-weight:650;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.newsCard a:hover{text-decoration:underline;color:#ffd34e}.newsCard small{color:#a9b9ce;font-size:.67rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tickerEmpty{font-size:.78rem;color:#c4d0df;padding:10px}@keyframes tickerEnter{from{opacity:.25;transform:translateX(18px)}to{opacity:1;transform:translateX(0)}}.tickerGrid{animation:tickerEnter .38s ease-out}
+#bar{left:12px;right:12px;bottom:var(--ab);display:flex;gap:8px;align-items:center;background:rgba(17,23,33,.88);border:1px solid var(--line);border-radius:12px;padding:7px 10px;box-shadow:0 8px 28px #0003;backdrop-filter:blur(14px)}#sl{flex:1;min-width:80px;height:32px;margin:0;accent-color:var(--acc);padding:0;background:transparent}#tl{min-width:130px;font-variant-numeric:tabular-nums;font-size:.78rem}#dbtn{display:flex;gap:3px;flex-wrap:wrap}#dbtn button{padding:3px 8px;font-size:.75rem}#toast{position:absolute;z-index:1200;left:50%;bottom:190px;transform:translateX(-50%);background:var(--dlg);border:1px solid var(--acc);border-radius:8px;padding:8px 14px;max-width:90vw;box-shadow:0 5px 20px #0004}
+dialog{background:var(--dlg);color:var(--ink);border:1px solid var(--line);border-radius:13px;width:min(620px,94vw);max-height:84vh;max-height:84dvh;overflow:auto;box-shadow:0 18px 60px #0007}dialog::backdrop{background:var(--back)}dialog h2{margin:0 0 8px;font-size:1.1rem}.row{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.nl{list-style:none;padding:0;margin:0}.nl li{margin:10px 0}.nl a{color:var(--ink);font-weight:650}label{display:grid;gap:3px;margin:6px 0;font-size:.85rem;color:var(--mut)}.err{color:var(--bad);min-height:1.2em;font-size:.88rem}.ok{color:var(--good)}.leaflet-control-attribution{background:var(--g)!important;color:var(--mut)!important}.leaflet-control-attribution a{color:var(--link)!important}.leaflet-bar a,.leaflet-bar a:hover{background:var(--g);color:var(--ink);border-color:var(--line)}.leaflet-control-zoom{margin-bottom:64px!important;margin-right:12px!important}.leaflet-control-attribution{font-size:10px}.leaflet-bottom{padding-bottom:env(safe-area-inset-bottom,0px)}dialog:not([open]){display:none}dialog.poly[open]{position:fixed;inset:0;margin:auto;height:fit-content;z-index:2000}
+@media(max-width:1099px){
+:root{--ab:calc(env(safe-area-inset-bottom,0px) + 30px)}
+#top{top:calc(env(safe-area-inset-top,0px) + 8px);left:8px;right:8px;transform:none;justify-content:space-between;padding:5px 7px;gap:4px}
+.logo{padding:0 4px;font-size:.9rem}#top button{padding:8px 9px;font-size:.78rem;min-height:38px}
+#panel{top:calc(env(safe-area-inset-top,0px) + 66px);left:8px;right:8px;width:auto;max-width:460px;max-height:42%;padding:8px}
+.srch input{font-size:16px}#pt{display:block;min-height:38px}
+#panel.c #now,#panel.c #days,#panel.c #favs{display:none}#panel:not(.c)~#newsTicker{display:none}
+#newsTicker{left:8px;right:8px;top:calc(env(safe-area-inset-top,0px) + 132px);height:46px;padding:4px 6px;display:flex;flex-direction:row;align-items:center;gap:6px}
+.tickerHead{order:2;margin:0}.tickerHead strong,.tickerHead span{display:none}.tickerControls{margin-left:0}.tickerGrid{flex:1;height:auto;min-width:0}
+.newsCard a{-webkit-line-clamp:1;font-size:.78rem}.tickerControls button{min-height:34px;padding:2px 10px}
+#menu{top:auto;left:8px;right:8px;bottom:calc(var(--ab) + 58px);flex-direction:row;max-height:none;overflow-x:auto;overflow-y:hidden;align-items:center;scrollbar-width:none}
+#menu::-webkit-scrollbar{display:none}#menu button{flex:none;min-height:38px;padding:7px 12px;font-size:.8rem}
+#leg{left:8px;bottom:calc(var(--ab) + 104px);width:min(210px,52vw)}
+#bar{left:8px;right:8px;padding:6px 8px}#play{width:42px;min-height:38px}#tl{min-width:104px;font-size:.74rem}
+.leaflet-control-zoom{margin-bottom:112px!important;margin-right:8px!important}.leaflet-bottom.leaflet-right{max-width:100%}
+#days{display:flex;overflow-x:auto;gap:5px;padding-bottom:4px}.dc{flex:0 0 76px}.big{font-size:2rem}#fld{filter:blur(2.5px) saturate(1.2)}}
+@media(pointer:coarse){.leaflet-control-zoom{display:none}}
+@media(max-width:599px){#dbtn{display:none}.dc{font-size:.68rem}}
+@media(max-width:380px){.logo{display:none}#top{justify-content:center}}
+@media(max-height:480px){#newsTicker,#leg{display:none}#panel{max-height:62%}}
+@media(prefers-reduced-motion:reduce){.tickerGrid{animation:none!important}}
+</style></head><body>
+<div id="map"></div>
+<header id="top"><b class="logo">MeteoMapa</b><button id="bBase" title="Alternar mapa base">Satélite</button><button id="bNews">Notícias</button><button id="bRep">Relatório</button><button id="bTheme" aria-label="Alternar entre tema claro e escuro" title="Alternar tema"></button></header>
+<aside id="panel" class="c"><div class="srch"><input id="q" type="search" enterkeyhint="search" placeholder="Buscar cidade" autocomplete="off" aria-label="Buscar cidade"><button id="loc" title="Minha localização" aria-label="Usar minha localização">◎</button><button id="pt" aria-label="Mostrar ou ocultar a previsão" aria-expanded="false">▾</button></div>
+<ul id="res"></ul><div id="favs"></div><div id="now" class="mut" style="margin-top:8px">Busque uma cidade ou clique no mapa.</div><div id="days"></div></aside>
+<nav id="menu" aria-label="Camadas"></nav><div id="leg"><div id="lgn"></div><div id="lgb"></div><div id="lgl"></div></div>
+<section id="newsTicker" aria-label="Notícias meteorológicas"><div class="tickerHead"><strong>ÚLTIMAS NOTÍCIAS</strong><span id="tickerMeta">Carregando manchetes…</span><div class="tickerControls"><button id="tickerPrev" aria-label="Notícias anteriores">‹</button><button id="tickerNext" aria-label="Próximas notícias">›</button></div></div><div class="tickerGrid" id="tickerGrid"><div class="tickerEmpty">Carregando notícias…</div></div></section>
+<div id="bar"><button id="play" aria-label="Reproduzir previsão">▶</button><div id="dbtn"></div><input type="range" id="sl" min="0" max="0" value="0" aria-label="Horário da previsão"><span id="tl">carregando…</span></div>
+<div id="toast" role="status" hidden></div>
+
+<dialog id="dNews"><h2>Notícias do tempo</h2><div class="row" id="ntabs"></div><p class="mut" id="nmeta"></p><ul class="nl" id="nlist"></ul><div class="row"><button onclick="this.closest('dialog').close()">Fechar</button></div></dialog>
+<dialog id="dRep"><h2>Relatório em PDF</h2><p class="mut">Gera um PDF do local selecionado, com previsão de 7 dias, manchetes e links clicáveis para o mapa ao vivo e para as fontes.</p>
+<div class="row"><button class="p" id="rPdf">Baixar PDF</button><button id="rWa">Enviar por WhatsApp</button></div>
+<label>E-mail para envio<input id="rMail" type="email" placeholder="nome@exemplo.com" autocomplete="email"></label><div class="row"><button id="rEm">Abrir no app de e-mail</button></div>
+<p class="mut">WhatsApp: em celulares o PDF segue anexado pelo menu de compartilhamento; em computadores o PDF é baixado e o WhatsApp abre com o resumo para você anexar. O relatório diário automático por e-mail é configurado no GitHub (veja o TUTORIAL.md).</p><div class="err" id="rErr" role="alert"></div>
+<div class="row"><button onclick="this.closest('dialog').close()">Fechar</button></div></dialog>
+<script src="vendor/leaflet.js"></script>
+<script>
+"use strict";
+/* Compatibilidade: <dialog> em navegadores antigos (iOS < 15.4) */
+document.querySelectorAll("dialog").forEach(d=>{if(typeof d.showModal!=="function"){d.classList.add("poly");d.showModal=()=>d.setAttribute("open","");d.close=()=>d.removeAttribute("open")}});
+const MOB=matchMedia("(max-width:1099px)"),loadJs=src=>new Promise((ok,no)=>{const e=document.createElement("script");e.src=src;e.onload=ok;e.onerror=no;document.head.append(e)});
+/* ===== Configuração (edite aqui) ===== */
+const GRID_NX=8,GRID_NY=6;  // pontos da grade do mapa (cada ponto conta como 1 chamada no Open-Meteo)
+
+const $=s=>document.querySelector(s),E=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+const KEY="meteomapa-v1";let ST={fav:[],layer:"wind",parts:true,radar:false};try{Object.assign(ST,JSON.parse(localStorage.getItem(KEY))||{})}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({fav:ST.fav,layer:ST.layer,parts:ST.parts,theme:ST.theme}))}catch(e){}};
+function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,6000)}
+const fmt=(v,d=0)=>v==null?"n/d":Number(v).toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
+const WMO={0:["Céu limpo","☀️"],1:["Poucas nuvens","🌤️"],2:["Parcialmente nublado","⛅"],3:["Nublado","☁️"],45:["Neblina","🌫️"],48:["Neblina","🌫️"],51:["Garoa fraca","🌦️"],53:["Garoa","🌦️"],55:["Garoa forte","🌧️"],61:["Chuva fraca","🌧️"],63:["Chuva","🌧️"],65:["Chuva forte","🌧️"],80:["Pancadas fracas","🌦️"],81:["Pancadas","🌧️"],82:["Pancadas fortes","⛈️"],95:["Trovoada","⛈️"],96:["Trovoada com granizo","⛈️"],99:["Trovoada com granizo","⛈️"]};
+const wmo=c=>WMO[c]||(c>=71&&c<=77?["Neve","❄️"]:["Sem descrição","🌡️"]);
+
+/* ===== Tema claro/escuro ===== */
+/* Provedores de mapa base, com troca automática se um falhar (a CARTO passou a exigir chave de API) */
+const ESRI="https://server.arcgisonline.com/ArcGIS/rest/services/",DARKF="invert(1) hue-rotate(180deg) brightness(.9) contrast(.88) saturate(.25)";
+const PROV={esriGray:{u:t=>`${ESRI}Canvas/World_${t==="dark"?"Dark":"Light"}_Gray_Base/MapServer/tile/{z}/{y}/{x}`,nz:16,a:"Tiles © Esri",f:()=>"none"},
+ osm:{u:()=>"https://tile.openstreetmap.org/{z}/{x}/{y}.png",nz:19,a:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',f:t=>t==="dark"?DARKF:"grayscale(.7)"},
+ esriStreet:{u:()=>`${ESRI}World_Street_Map/MapServer/tile/{z}/{y}/{x}`,nz:19,a:"Tiles © Esri",f:t=>t==="dark"?DARKF:"grayscale(.7)"},
+ sat:{u:()=>`${ESRI}World_Imagery/MapServer/tile/{z}/{y}/{x}`,nz:17,a:"Imagery © Esri",f:()=>"none"}};
+const CHAIN={street:["esriGray","osm","esriStreet"],sat:["sat","osm"]};
+const sysDark=matchMedia("(prefers-color-scheme:dark)");let TH=ST.theme||(sysDark.matches?"dark":"light"),base=null,BASE="street",PI=0;
+function mountBase(){if(base)map.removeLayer(base);const p=PROV[CHAIN[BASE][PI]];let ok=0,bad=0,dead=false;
+ const ly=base=L.tileLayer(p.u(TH),{pane:"basePane",maxZoom:19,maxNativeZoom:p.nz,attribution:p.a}).addTo(map);map.getPane("basePane").style.filter=p.f(TH);
+ ly.on("tileload",()=>{ok++});ly.on("tileerror",()=>{bad++;if(!dead&&!ok&&bad>=4&&PI<CHAIN[BASE].length-1){dead=true;PI++;toast("Mapa base indisponível. Trocando de provedor…");mountBase()}})}
+function applyTheme(){TH=ST.theme||(sysDark.matches?"dark":"light");document.documentElement.dataset.theme=TH;if(base)mountBase();
+ $("#bTheme").textContent=TH==="dark"?"☀":"☾";$("#bTheme").setAttribute("aria-label",TH==="dark"?"Mudar para tema claro":"Mudar para tema escuro");
+ const m=document.querySelector('meta[name=theme-color]');if(m)m.content=TH==="dark"?"#0b1020":"#e9eef6";$("#map").style.background=TH==="dark"?"#2b2f35":"#dfe5ec"}
+$("#bTheme").onclick=()=>{ST.theme=TH==="dark"?"light":"dark";save();applyTheme()};
+(sysDark.addEventListener?sysDark.addEventListener("change",()=>{if(!ST.theme)applyTheme()}):0);
+
+/* ===== Paletas ===== */
+const PAL={wind:{n:"Vento",u:"km/h",s:[[0,[42,75,215]],[10,[40,150,215]],[20,[40,190,120]],[35,[170,215,50]],[50,[250,190,40]],[70,[235,90,50]],[100,[170,40,160]]]},
+ temp:{n:"Temperatura",u:"°C",s:[[-5,[120,60,190]],[5,[50,110,220]],[15,[60,200,200]],[22,[150,215,80]],[28,[250,200,40]],[35,[240,110,40]],[42,[190,30,40]]]},
+ rain:{n:"Chuva",u:"mm/h",s:[[0,[30,95,235]],[.5,[0,170,255]],[1.5,[25,205,170]],[3,[115,220,65]],[6,[250,220,35]],[12,[255,135,25]],[20,[225,35,45]]]},
+ cloud:{n:"Nuvens",u:"%",s:[[0,[210,225,245]],[100,[245,248,255]]]},
+ pres:{n:"Pressão",u:"hPa",s:[[985,[120,70,190]],[1005,[60,130,220]],[1015,[90,200,160]],[1025,[240,210,80]],[1040,[230,100,60]]]}};
+function color(L,v){const s=PAL[L].s;let r;if(v<=s[0][0])r=s[0][1];else if(v>=s[s.length-1][0])r=s[s.length-1][1];else{let i=1;while(v>s[i][0])i++;const t=(v-s[i-1][0])/(s[i][0]-s[i-1][0]),a=s[i-1][1],b=s[i][1];r=[a[0]+(b[0]-a[0])*t|0,a[1]+(b[1]-a[1])*t|0,a[2]+(b[2]-a[2])*t|0]}
+ const al=L==="rain"?(v<.05?0:Math.min(.88,.38+v/5)):L==="cloud"?Math.min(.62,v/100*.62):.58;return[r[0],r[1],r[2],al]}
+function samp(arr,G,lat,lon,h){const fi=Math.min(G.nx-1.001,Math.max(0,(lon-G.w)/G.dx)),fj=Math.min(G.ny-1.001,Math.max(0,(lat-G.s)/G.dy)),i=fi|0,j=fj|0,a=fi-i,b=fj-j,k=j*G.nx+i;return arr[k][h]*(1-a)*(1-b)+arr[k+1][h]*a*(1-b)+arr[k+G.nx][h]*(1-a)*b+arr[k+G.nx+1][h]*a*b}
+
+/* ===== Mapa ===== */
+const map=L.map("map",{zoomControl:false,worldCopyJump:true,minZoom:2,maxZoom:10}).setView([-14,-52],4);
+L.control.zoom({position:"bottomright"}).addTo(map);
+map.createPane("basePane");map.getPane("basePane").style.zIndex=200;map.getPane("basePane").style.filter="grayscale(1) brightness(.76) contrast(1.16)";
+map.createPane("weatherPane");map.getPane("weatherPane").style.zIndex=430;
+applyTheme();mountBase();
+map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');map.attributionControl.addAttribution('Dados: <a href="https://open-meteo.com/">Open-Meteo.com</a> (CC BY 4.0)');
+$("#bBase").onclick=()=>{BASE=BASE==="street"?"sat":"street";PI=0;mountBase();$("#bBase").textContent=BASE==="street"?"Satélite":"Mapa"};
+if(window.ResizeObserver)new ResizeObserver(()=>map.invalidateSize({pan:false})).observe($("#map"));
+$("#pt").onclick=()=>{const c=$("#panel").classList.toggle("c");$("#pt").setAttribute("aria-expanded",String(!c))};
+const cv=document.createElement("canvas"),cp=document.createElement("canvas");cv.id="fld";cp.id="prt";map.getContainer().append(cv,cp);
+const cx=cv.getContext("2d"),px=cp.getContext("2d");let G=null,T=0,lat=null,GK="",POINT=null,NEWS=null;
+function fit(){const s=map.getSize();cv.width=cp.width=s.x;cv.height=cp.height=s.y}fit();
+
+async function loadGrid(){const b=map.getBounds().pad(.12),s=Math.max(-80,b.getSouth()),n=Math.min(80,b.getNorth()),w=Math.max(-180,b.getWest()),e=Math.min(180,b.getEast());
+ const key=[s,n,w,e].map(v=>Math.round(v/3)).join("|");if(G&&key===GK){render();return}
+ const la=[],lo=[];for(let j=0;j<GRID_NY;j++)for(let i=0;i<GRID_NX;i++){la.push(+(s+(n-s)*j/(GRID_NY-1)).toFixed(2));lo.push(+(w+(e-w)*i/(GRID_NX-1)).toFixed(2))}
+ try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&hourly=temperature_2m,precipitation,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m&forecast_days=4&timezone=UTC`);
+  if(!r.ok)throw new Error(r.status);const d=await r.json(),arr=Array.isArray(d)?d:[d],times=arr[0].hourly.time,mk=f=>arr.map(o=>Float32Array.from(o.hourly[f],x=>x==null?0:x));
+  const ws=mk("wind_speed_10m"),wd=mk("wind_direction_10m"),old=G&&G.times[T];
+  G={s:la[0],w:lo[0],dx:(lo[GRID_NX-1]-lo[0])/(GRID_NX-1),dy:(la[(GRID_NY-1)*GRID_NX]-la[0])/(GRID_NY-1),nx:GRID_NX,ny:GRID_NY,times,
+   u:ws.map((a,k)=>a.map((v,h)=>-v*Math.sin(wd[k][h]*Math.PI/180))),vv:ws.map((a,k)=>a.map((v,h)=>-v*Math.cos(wd[k][h]*Math.PI/180))),
+   v:{wind:ws,temp:mk("temperature_2m"),rain:mk("precipitation"),cloud:mk("cloud_cover"),pres:mk("pressure_msl")}};GK=key;
+  const ix=old?times.indexOf(old):-1;if(ix>=0)T=ix;else{const now=Date.now();T=0;times.forEach((t,i)=>{if(new Date(t+":00Z")<=now)T=i})}
+  timeline();render()}catch(err){toast(String(err.message)==="429"?"Limite gratuito do Open-Meteo atingido. Tente em alguns minutos.":"Não foi possível carregar os dados do mapa agora.")}}
+function render(){if(!G)return;const W=cv.width,H=cv.height,st=MOB.matches?12:10,cols=Math.ceil(W/st),rows=Math.ceil(H/st);lat={cols,rows,st,u:new Float32Array(cols*rows),v:new Float32Array(cols*rows)};cx.clearRect(0,0,W,H);
+ for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const ll=map.containerPointToLatLng([c*st+st/2,r*st+st/2]),i=r*cols+c;lat.u[i]=samp(G.u,G,ll.lat,ll.lng,T);lat.v[i]=samp(G.vv,G,ll.lat,ll.lng,T);
+  const col=color(ST.layer,samp(G.v[ST.layer],G,ll.lat,ll.lng,T));cx.fillStyle=`rgba(${col[0]},${col[1]},${col[2]},${col[3]})`;cx.fillRect(c*st,r*st,st,st)}
+ cv.style.opacity=1;cp.style.opacity=ST.parts?1:0;seed()}
+let P=[];const np=()=>({x:Math.random()*cp.width,y:Math.random()*cp.height,a:65+Math.random()*95|0});
+function seed(){P=Array.from({length:Math.min(MOB.matches?1500:3200,cp.width*cp.height/430|0)},np)}
+function frame(){if(lat&&ST.parts){px.globalCompositeOperation="destination-out";px.fillStyle="rgba(0,0,0,.08)";px.fillRect(0,0,cp.width,cp.height);px.globalCompositeOperation="source-over";px.strokeStyle=TH==="dark"?"rgba(255,255,255,.88)":"rgba(20,33,61,.72)";px.lineWidth=1.25;px.beginPath();
+ for(const p of P){const c=p.x/lat.st|0,r=p.y/lat.st|0;if(c<0||r<0||c>=lat.cols||r>=lat.rows||p.a--<0){Object.assign(p,np());continue}const i=r*lat.cols+c;px.moveTo(p.x,p.y);p.x+=lat.u[i]*.03;p.y-=lat.v[i]*.03;px.lineTo(p.x,p.y)}px.stroke()}requestAnimationFrame(frame)}
+let deb=0;const refresh=()=>{clearTimeout(deb);deb=setTimeout(loadGrid,500)};
+map.on("movestart",()=>{cv.style.opacity=0;cp.style.opacity=0;px.clearRect(0,0,cp.width,cp.height)});map.on("moveend",refresh);map.on("resize",()=>{fit();refresh()});
+
+/* ===== Linha do tempo ===== */
+const when=i=>new Date(G.times[i]+":00Z");
+function lbl(){$("#tl").textContent=when(T).toLocaleString("pt-BR",{weekday:"short",day:"2-digit",hour:"2-digit",minute:"2-digit"})}
+function timeline(){const sl=$("#sl");sl.max=G.times.length-1;sl.value=T;lbl();const box=$("#dbtn"),seen={};box.replaceChildren();
+ G.times.forEach((t,i)=>{const d=when(i),k=d.toLocaleDateString("pt-BR");if(seen[k]===undefined||d.getHours()===12&&!seen[k+"n"]){seen[k]=i;if(d.getHours()===12)seen[k+"n"]=1}});
+ Object.keys(seen).filter(k=>!k.endsWith("n")).forEach(k=>{const i=seen[k],b=E("button",null,when(i).toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit"}));b.onclick=()=>{T=i;sl.value=i;lbl();render()};box.append(b)})}
+$("#sl").oninput=e=>{T=+e.target.value;lbl();render()};let timer=0;
+$("#play").onclick=()=>{if(!G)return;if(timer){clearInterval(timer);timer=0;$("#play").textContent="▶"}else{$("#play").textContent="⏸";timer=setInterval(()=>{T=(T+1)%G.times.length;$("#sl").value=T;lbl();render()},700)}};
+
+/* ===== Camadas e legenda ===== */
+function menu(){const m=$("#menu");m.replaceChildren();Object.keys(PAL).forEach(k=>{const b=E("button",ST.layer===k?"on":"",PAL[k].n);b.onclick=()=>{ST.layer=k;save();menu();legend();render()};m.append(b)});
+ const p=E("button",ST.parts?"on":"","Partículas");p.onclick=()=>{ST.parts=!ST.parts;save();if(!ST.parts)px.clearRect(0,0,cp.width,cp.height);menu();render()};
+ const r=E("button",ST.radar?"on":"","Radar");r.onclick=()=>{ST.radar=!ST.radar;menu();radar(ST.radar)};m.append(p,r)}
+function legend(){const c=PAL[ST.layer],s=c.s,a=s[0][0],z=s[s.length-1][0];$("#lgn").textContent=c.n+" ("+c.u+")";
+ $("#lgb").style.background="linear-gradient(90deg,"+s.map(x=>`rgb(${x[1]}) ${(x[0]-a)/(z-a)*100}%`).join(",")+")";$("#lgl").replaceChildren(E("span",null,String(a)),E("span",null,String(z)))}
+let rad=null,radFr=[],radI=0,radT=0,radHost="";const rurl=()=>`${radHost}${radFr[radI]}/256/{z}/{x}/{y}/2/1_1.png`;
+async function radar(on){clearInterval(radT);if(!on){if(rad){map.removeLayer(rad);rad=null}return}
+ try{const r=await fetch("https://api.rainviewer.com/public/weather-maps.json");if(!r.ok)throw 0;const d=await r.json();radHost=d.host;radFr=d.radar.past.map(f=>f.path);radI=radFr.length-1;
+  rad=L.tileLayer(rurl(),{pane:"weatherPane",opacity:.82,maxNativeZoom:7,maxZoom:10,attribution:'Radar: <a href="https://www.rainviewer.com/">RainViewer</a>'}).addTo(map);radT=setInterval(()=>{radI=(radI+1)%radFr.length;rad.setUrl(rurl())},800);toast("Radar do RainViewer: apenas passado recente e zoom até 7.")}
+ catch(e){toast("Radar indisponível agora.");ST.radar=false;menu()}}
+
+/* ===== Local, busca e previsão ===== */
+const marker=L.circleMarker([0,0],{radius:7,color:"#f5b301",fillColor:"#f5b301",fillOpacity:.9});
+async function setPoint(la,lo,name){POINT={lat:la,lon:lo,name:name||`${fmt(la,2)}, ${fmt(lo,2)}`};$("#panel").classList.remove("c");$("#pt").setAttribute("aria-expanded","true");marker.setLatLng([la,lo]).addTo(map);$("#now").textContent="Carregando…";$("#days").replaceChildren();
+ try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,precipitation&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max&forecast_days=7&timezone=auto`);
+  if(!r.ok)throw 0;POINT.d=await r.json();showPoint();try{history.replaceState(null,"",`#${la.toFixed(3)},${lo.toFixed(3)},${map.getZoom()}`)}catch(e){}}catch(e){$("#now").textContent="Sem dados para este ponto agora."}}
+function showPoint(){const d=POINT.d,c=d.current,w=wmo(c.weather_code),n=$("#now");n.className="";n.replaceChildren();
+ const h=E("div",null,POINT.name);h.style.fontWeight=600;const isFav=ST.fav.some(f=>f.name===POINT.name),st=E("button",null,isFav?"★":"☆");st.setAttribute("aria-label","Favoritar");st.style.cssText="float:right;padding:0 8px";
+ st.onclick=()=>{ST.fav=isFav?ST.fav.filter(f=>f.name!==POINT.name):ST.fav.concat({name:POINT.name,lat:POINT.lat,lon:POINT.lon}).slice(-8);save();favs();showPoint()};h.prepend(st);
+ n.append(h,E("div","big",fmt(c.temperature_2m)+"°"),E("div",null,w[1]+" "+w[0]),E("div","mut",`Sensação ${fmt(c.apparent_temperature)}° · vento ${fmt(c.wind_speed_10m)} km/h · umidade ${fmt(c.relative_humidity_2m)}%`));
+ const box=$("#days");box.replaceChildren();d.daily.time.forEach((t,i)=>{const dc=E("div","dc"),dt=new Date(t+"T12:00:00");dc.append(E("b",null,dt.toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit"})),E("span",null,wmo(d.daily.weather_code[i])[1]),E("div",null,`${fmt(d.daily.temperature_2m_min[i])}°/${fmt(d.daily.temperature_2m_max[i])}°`),E("div","mut","💧"+fmt(d.daily.precipitation_probability_max[i])+"%"));box.append(dc)})}
+function favs(){const f=$("#favs");f.replaceChildren();ST.fav.forEach(x=>{const b=E("button",null,x.name);b.onclick=()=>{map.flyTo([x.lat,x.lon],7);setPoint(x.lat,x.lon,x.name)};f.append(b)})}
+let qd=0;$("#q").oninput=e=>{clearTimeout(qd);const q=e.target.value.trim(),ul=$("#res");if(q.length<2){ul.replaceChildren();return}
+ qd=setTimeout(async()=>{try{const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=pt&format=json`),d=await r.json();ul.replaceChildren();
+  (d.results||[]).forEach(x=>{const li=E("li"),b=E("button",null,[x.name,x.admin1,x.country].filter(Boolean).join(", "));b.onclick=()=>{ul.replaceChildren();$("#q").value="";map.flyTo([x.latitude,x.longitude],8);setPoint(x.latitude,x.longitude,x.name+(x.admin1?", "+x.admin1:""))};li.append(b);ul.append(li)});
+  if(!(d.results||[]).length)ul.append(E("li","mut","Nenhum resultado."))}catch(e){toast("Busca indisponível agora.")}},350)};
+$("#q").onkeydown=e=>{if(e.key==="Enter"){const b=document.querySelector("#res button");if(b)b.click()}};
+$("#loc").onclick=()=>{if(!navigator.geolocation)return toast("Seu navegador não oferece geolocalização.");navigator.geolocation.getCurrentPosition(p=>{map.flyTo([p.coords.latitude,p.coords.longitude],8);setPoint(p.coords.latitude,p.coords.longitude,"Minha localização")},()=>toast("Não consegui obter sua localização (permissão negada?)."),{timeout:10000})};
+map.on("click",e=>setPoint(e.latlng.lat,e.latlng.lng));
+
+/* ===== Notícias: painel completo + carrossel na tela inicial ===== */
+let NS="Brasil",NEWS_INDEX=0,NEWS_TIMER=null;const PP=()=>innerWidth>=1500?5:innerWidth>=1100?3:1;addEventListener("resize",()=>{clearTimeout(PP.t);PP.t=setTimeout(renderTicker,200)});
+async function loadNews(){try{const r=await fetch("news.json?"+Date.now());if(r.ok)NEWS=await r.json()}catch(e){}renderTicker()}
+function newsItems(){return ((NEWS&&NEWS.items)||[]).slice().sort((a,b)=>new Date(b.published||0)-new Date(a.published||0))}
+function renderTicker(){const grid=$("#tickerGrid"),meta=$("#tickerMeta");if(!NEWS){grid.innerHTML='<div class="tickerEmpty">Notícias indisponíveis. Consulte o painel Notícias.</div>';meta.textContent="Sem atualização";return}
+ const all=newsItems();if(!all.length){grid.innerHTML='<div class="tickerEmpty">Nenhuma manchete disponível nesta categoria.</div>';meta.textContent="Sem manchetes";return}
+ const pp=PP(),total=Math.ceil(all.length/pp),page=NEWS_INDEX%total,items=all.slice(page*pp,page*pp+pp);grid.replaceChildren();grid.style.gridTemplateColumns=`repeat(${pp},minmax(0,1fr))`;grid.style.animation="none";void grid.offsetWidth;grid.style.animation="tickerEnter .38s ease-out";items.forEach(i=>{const card=E("article","newsCard"),a=E("a",null,i.title||"Notícia meteorológica");if(/^https?:\/\//.test(i.link||"")){a.href=i.link;a.target="_blank";a.rel="noopener noreferrer"}const sm=E("small",null,`${i.source||"Fonte"} · ${i.published?new Date(i.published).toLocaleDateString("pt-BR"):""}`);card.append(a,sm);grid.append(card)});
+ const age=NEWS.generated_at?new Date(NEWS.generated_at).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):"";meta.textContent=`${items.length} de ${all.length} manchetes · ${age}`}
+function tickerMove(delta){const all=newsItems(),pages=Math.max(1,Math.ceil(all.length/PP()));NEWS_INDEX=(NEWS_INDEX+delta+pages)%pages;renderTicker()}
+$("#tickerPrev").onclick=()=>tickerMove(-1);$("#tickerNext").onclick=()=>tickerMove(1);
+function startTicker(){clearInterval(NEWS_TIMER);if(matchMedia("(prefers-reduced-motion:reduce)").matches)return;NEWS_TIMER=setInterval(()=>tickerMove(1),8500)}startTicker();
+function newsView(){const tb=$("#ntabs");tb.replaceChildren();["Brasil","Mundo","Tempestades"].forEach(s=>{const b=E("button",NS===s?"on":"",s);b.onclick=()=>{NS=s;NEWS_INDEX=0;newsView();renderTicker()};tb.append(b)});const ul=$("#nlist");ul.replaceChildren();
+ if(!NEWS){$("#nmeta").textContent="news.json não encontrado. Rode o workflow “Atualizar notícias”.";return}
+ const age=(Date.now()-new Date(NEWS.generated_at))/36e5;$("#nmeta").textContent=`Atualizado em ${new Date(NEWS.generated_at).toLocaleString("pt-BR")} (há ${Math.max(0,Math.round(age))} h). Títulos, fontes e links originais.`;
+ const it=(NEWS.items||[]).filter(i=>i.scope===NS);if(!it.length)ul.append(E("li","mut","Nenhuma notícia nesta seção ainda."));
+ it.slice(0,30).forEach(i=>{const li=E("li"),a=E("a",null,i.title);if(/^https?:\/\//.test(i.link||"")){a.href=i.link;a.target="_blank";a.rel="noopener noreferrer"}li.append(a,E("div","mut",`${i.source} · ${i.published?new Date(i.published).toLocaleString("pt-BR"):""}`));ul.append(li)})}
+$("#bNews").onclick=async()=>{await loadNews();newsView();$("#dNews").showModal()};
+
+/* ===== Relatório PDF / WhatsApp / e-mail ===== */
+const okMail=v=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+function shortTxt(){const d=POINT.d,c=d.current;return`Previsão para ${POINT.name}: agora ${fmt(c.temperature_2m)}°C, ${wmo(c.weather_code)[0]}. Hoje ${fmt(d.daily.temperature_2m_min[0])}° a ${fmt(d.daily.temperature_2m_max[0])}°, chuva ${fmt(d.daily.precipitation_probability_max[0])}%.\nMapa ao vivo: ${location.origin}${location.pathname}#${POINT.lat.toFixed(3)},${POINT.lon.toFixed(3)},8`}
+async function mapSnapshot(){
+ // Captura uma imagem cartográfica real com tiles OSM; desenha o marcador e a escala no canvas.
+ const size=640,canvas=document.createElement("canvas");canvas.width=size;canvas.height=340;const ctx=canvas.getContext("2d");ctx.fillStyle="#15243a";ctx.fillRect(0,0,size,340);
+ const zoom=Math.max(4,Math.min(8,map.getZoom()||6)),n=2**zoom,latRad=POINT.lat*Math.PI/180;
+ const xt=(POINT.lon+180)/360*n,yt=(1-Math.asinh(Math.tan(latRad))/Math.PI)/2*n;
+ const centerX=xt*256,centerY=yt*256,originX=centerX-size/2,originY=centerY-340/2;
+ const x0=Math.floor(originX/256),y0=Math.floor(originY/256),x1=Math.floor((originX+size)/256),y1=Math.floor((originY+340)/256);let loaded=0,failed=false;
+ const tasks=[];for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++){const img=new Image();img.crossOrigin="anonymous";const xx=x,yy=y;tasks.push(new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;clearTimeout(limit);resolve()};const limit=setTimeout(()=>{failed=true;finish()},5500);img.onload=()=>{if(done)return;try{ctx.drawImage(img,xx*256-originX,yy*256-originY,256,256);loaded++}catch(e){failed=true}finish()};img.onerror=()=>{failed=true;finish()};img.src=`https://tile.openstreetmap.org/${zoom}/${(x+n)%n}/${y}.png`}))}
+ await Promise.all(tasks);
+ if(!loaded){ctx.fillStyle="#1b304a";ctx.fillRect(0,0,size,340);ctx.strokeStyle="rgba(180,210,240,.18)";ctx.lineWidth=1;for(let x=0;x<size;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,340);ctx.stroke()}for(let y=0;y<340;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(size,y);ctx.stroke()}ctx.fillStyle="#e8f1ff";ctx.font="16px sans-serif";ctx.fillText("Mapa esquemático da localização",18,28);ctx.font="12px sans-serif";ctx.fillText("Tiles cartográficos indisponíveis nesta geração.",18,50)}
+ const mx=size/2,my=170;ctx.beginPath();ctx.arc(mx,my,10,0,Math.PI*2);ctx.fillStyle="#ffc400";ctx.fill();ctx.lineWidth=3;ctx.strokeStyle="#172338";ctx.stroke();ctx.beginPath();ctx.arc(mx,my,19,0,Math.PI*2);ctx.strokeStyle="rgba(255,196,0,.55)";ctx.lineWidth=2;ctx.stroke();ctx.fillStyle="#fff";ctx.font="bold 13px sans-serif";ctx.fillText(POINT.name.slice(0,55),14,320);ctx.fillStyle="#fff";ctx.fillRect(size-112,314,98,18);ctx.fillStyle="#14243a";ctx.font="10px sans-serif";ctx.fillText("OpenStreetMap",size-106,327);
+ try{return canvas.toDataURL("image/jpeg",.82)}catch(e){
+  // Alguns servidores de tiles não autorizam exportação cross-origin; garante uma imagem cartográfica esquemática no PDF.
+  ctx.fillStyle="#172b43";ctx.fillRect(0,0,size,340);ctx.strokeStyle="rgba(165,198,225,.25)";ctx.lineWidth=2;
+  for(let i=0;i<7;i++){ctx.beginPath();ctx.moveTo(-20,i*62+20);ctx.bezierCurveTo(160,i*62-25,390,i*62+95,670,i*62+15);ctx.stroke()}
+  ctx.strokeStyle="rgba(236,190,105,.75)";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(60,300);ctx.bezierCurveTo(180,230,260,270,330,170);ctx.bezierCurveTo(400,80,500,130,600,30);ctx.stroke();
+  ctx.fillStyle="#e8f1ff";ctx.font="bold 16px sans-serif";ctx.fillText("MAPA ESQUEMÁTICO",18,28);ctx.font="12px sans-serif";ctx.fillText("Imagem cartográfica externa bloqueou a exportação.",18,50);ctx.fillText(`${POINT.lat.toFixed(4)}, ${POINT.lon.toFixed(4)}`,18,320);
+  ctx.beginPath();ctx.arc(size/2,170,10,0,Math.PI*2);ctx.fillStyle="#ffc400";ctx.fill();ctx.lineWidth=3;ctx.strokeStyle="#172338";ctx.stroke();return canvas.toDataURL("image/jpeg",.82)
+ }
+}
+async function pdfFile(){if(!POINT||!POINT.d){$("#rErr").textContent="Escolha um local no mapa ou na busca antes.";return null}$("#rErr").textContent="Preparando relatório e imagem do mapa…";if(!window.jspdf){try{await loadJs("vendor/jspdf.umd.min.js")}catch(e){}}if(!window.jspdf){$("#rErr").textContent="A biblioteca de PDF não carregou.";return null}
+ const d=new window.jspdf.jsPDF(),D=POINT.d,c=D.current;let y=16;const ln=(t,s=10,url)=>{d.setFontSize(s);d.splitTextToSize(t,182).forEach(l=>{if(y>282){d.addPage();y=18}if(url){d.setTextColor(20,90,200);d.textWithLink(l,14,y,{url});d.setTextColor(0)}else d.text(l,14,y);y+=s*.5+2.6})};
+ ln("RELATÓRIO METEOROLÓGICO",16);ln(POINT.name+"  |  gerado em "+new Date().toLocaleString("pt-BR"),9);y+=3;
+ try{const img=await mapSnapshot();d.setFontSize(10);d.text("Mapa da localização selecionada",14,y);y+=4;d.addImage(img,"JPEG",14,y,182,96,undefined,"FAST");y+=102}catch(e){ln("Mapa: imagem indisponível no momento.",9);y+=2}
+ ln(`Coordenadas: ${POINT.lat.toFixed(4)}, ${POINT.lon.toFixed(4)}`,9);y+=3;
+ ln(`Agora: ${fmt(c.temperature_2m)} C (sensação ${fmt(c.apparent_temperature)} C), ${wmo(c.weather_code)[0]}, vento ${fmt(c.wind_speed_10m)} km/h, umidade ${fmt(c.relative_humidity_2m)}%`,10);y+=3;ln("PRÓXIMOS 7 DIAS",12);
+ D.daily.time.forEach((t,i)=>ln(`${new Date(t+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit"})}   ${fmt(D.daily.temperature_2m_min[i])} / ${fmt(D.daily.temperature_2m_max[i])} C   chuva ${fmt(D.daily.precipitation_probability_max[i])}%   vento max ${fmt(D.daily.wind_speed_10m_max[i])} km/h   ${wmo(D.daily.weather_code[i])[0]}`,9));
+ y+=4;ln("Abrir o mapa ao vivo neste local",10,`${location.origin}${location.pathname}#${POINT.lat.toFixed(3)},${POINT.lon.toFixed(3)},8`);
+ const it=((NEWS&&NEWS.items)||[]).filter(i=>i.scope==="Brasil").slice(0,6);if(it.length){y+=4;ln("MANCHETES",11);it.forEach(i=>ln(i.title+" ("+i.source+")",8,/^https?:\/\//.test(i.link||"")?i.link:undefined))}
+ y+=5;ln("Dados meteorológicos: Open-Meteo.com (CC BY 4.0). Cartografia: OpenStreetMap. Material informativo; para alertas oficiais consulte INMET e Defesa Civil.",8);
+ $("#rErr").textContent="Relatório pronto.";return new File([d.output("blob")],"relatorio-tempo-"+new Date().toISOString().slice(0,10)+".pdf",{type:"application/pdf"})}
+function dlFile(f){const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+$("#bRep").onclick=async()=>{await loadNews();$("#rErr").textContent="";$("#dRep").showModal()};
+$("#rPdf").onclick=async()=>{const f=await pdfFile();if(f)dlFile(f)};
+$("#rWa").onclick=async()=>{const f=await pdfFile();if(!f)return;const t=shortTxt();
+ if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:"Previsão do tempo",text:t});return}catch(e){if(e.name==="AbortError")return}}
+ dlFile(f);window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank","noopener");toast("PDF baixado. Anexe-o na conversa do WhatsApp.")};
+$("#rEm").onclick=async()=>{const em=$("#rMail").value.trim();if(!okMail(em)){$("#rErr").textContent="Digite um e-mail válido.";return}const f=await pdfFile();if(!f)return;dlFile(f);
+ setTimeout(()=>{location.href=`mailto:${em}?subject=${encodeURIComponent("Previsão do tempo: "+POINT.name)}&body=${encodeURIComponent(shortTxt()+"\n\n(O PDF foi baixado: anexe o arquivo.)")}`},400)};
+
+/* ===== Início ===== */
+menu();legend();favs();loadNews();requestAnimationFrame(frame);
+(()=>{const h=location.hash.slice(1).split(",").map(Number);if(h.length>=2&&h.every(isFinite)){map.setView([h[0],h[1]],h[2]||8);setPoint(h[0],h[1])}else loadGrid();if(h.length>=2)loadGrid()})();
+if(ST.radar)radar(true);
+</script></body></html>
